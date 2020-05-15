@@ -13,20 +13,22 @@ from data import make_loader, load_swbd_labelled
 from average_precision import average_precision
 from model import GatedCNN, Siamese
 
+
+torch.manual_seed(2020)  # cpu
+torch.cuda.manual_seed(2020)  # gpu
+np.random.seed(2020)  # numpy
+random.seed(2020)  # random and transforms
+
+
 # Configurations
-seed = 37
 log_interval = 50
 MAX_EPOCHS = 1000
 min_count = 3
 batch_size = 32
-SAVE_PATH = "../check_points_Siamese"
-data_dir = "../data"
+SAVE_PATH = "../saved"
+data_dir = "../data/"
 
-# Set the random seed manually for reproducibility
-torch.manual_seed(seed)
 if torch.cuda.is_available():
-    torch.cuda.manual_seed(seed)
-    # Select cuda device
     cuda0 = torch.device("cuda:0")
 
 
@@ -72,7 +74,6 @@ def get_batch(train_x, train_y, achor_xs, achor_ys, S):
     same_xs = torch.zeros_like(achor_xs)
     diff_ys = torch.zeros_like(achor_ys)
     for s in range(batch_size):
-        breakpoint()
         achor_y = achor_ys[s]
         n_achor_y = torch.sum(train_y == achor_y)
 
@@ -137,12 +138,9 @@ def evaluate(dev_ldr):
 
 if __name__ == "__main__":
     # Loading data
-    print("-" * 89)
     print("Loading data...")
     ntokens, train_x, train_y, train_ldr, dev_ldr, test_ldr = data_loader()
-    print("-" * 89)
     print("Data loaded")
-    print("-" * 89)
 
     net = Siamese(GatedCNN, out_dims=1024, activation=F.tanh)
     net = net.cuda() if torch.cuda.is_available() else net.cpu()
@@ -157,15 +155,12 @@ if __name__ == "__main__":
 
             train(ntokens, train_x, train_y, train_ldr)
             dev_ap = evaluate(dev_ldr)
-            print("-" * 89)
             print(
                 "| end of epoch {:3d} | time: {:5.2f}s | dev ap {:5.4f}".format(
                     epoch, (time.time() - epoch_start_time), dev_ap
                 )
             )
-            print("-" * 89)
 
-            # torch.save(net, os.path.join(SAVE_PATH, str(epoch)))
             dev_APs[epoch - 1] = dev_ap
             if dev_ap > best_so_far:
                 best_so_far = dev_ap
